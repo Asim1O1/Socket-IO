@@ -1,35 +1,60 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import './App.css';
+import io from 'socket.io-client';
+import { useEffect, useState } from 'react';
+
+const socket = io.connect("http://localhost:4000");
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [message, setMessage] = useState("");
+  const [messages, setMessages] = useState([]);
+
+  const sendMessage = () => {
+    if (message) {
+      socket.emit('send_message', { message });
+      setMessage(""); 
+    }
+  };
+
+  useEffect(() => {
+    socket.on('receive_message', (data) => {
+      setMessages((prevMessages) => [...prevMessages, data.message]);
+    });
+
+    return () => {
+      socket.off('receive_message'); // Clean up the event listener
+    };
+  }, []);
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <div className="flex flex-col h-screen bg-gray-200">
+      <div className="bg-blue-500 p-4 text-white text-lg font-bold">
+        Chat Application
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
+
+      {/* Chat Area */}
+      <div className="flex-grow p-4 overflow-y-auto">
+        {messages.map((msg, index) => (
+          <div key={index} className="mb-2 p-2 bg-white rounded-lg shadow-md">
+            <p>User: {msg}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Input Area */}
+      <div className="p-4 bg-gray-300">
+        <input
+          type="text"
+          placeholder="Type your message..."
+          className="w-full p-2 border rounded-lg"
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+        />
+        <button onClick={sendMessage} className="mt-2 w-full bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600">
+          Send
         </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
       </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    </div>
+  );
 }
 
-export default App
+export default App;
