@@ -1,20 +1,24 @@
-// import express from "express";
-// import { Server } from "socket.io";
-// import { createServer } from "http";
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import authRoutes from "./routes/authRoute.js";
 
-// const app = express();
-// const server = createServer(app);
+dotenv.config({ path: "../.env" });
+const port = process.env.PORT;
 
-// const io = new Server(server);
+const app = express();
 
-// io.on("connection", (socket) => {
-//   console.log("connection established");
-// });
-// app.get("/", (req, res) => {
-//   res.send("Creating a chat app!");
-// });
+// Middlewares
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// const PORT = 3000;
-// app.listen(PORT, () => {
-//   console.log(`Server is running on port ${PORT}`);
-// });
+app.get("/", (req, res) => {
+  res.send("Chat app's api.....");
+});
+
+app.use("/api/auth", authRoutes);
+
+app.listen(port, () => {
+  console.log("Server listening on port", port);
+});
