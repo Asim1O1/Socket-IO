@@ -1,64 +1,63 @@
 import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import authSchema from "../middlewares/validation_schema.js";
+
 export const SignupUser = async (req, res) => {
   try {
-    const { fullName, userName, email, password, confirmPassword, gender } =
-      req.body;
+    // Validate request body using Joi schema
+    await authSchema.validateAsync(req.body);
 
-    if (
-      !fullName ||
-      !userName ||
-      !email ||
-      !password ||
-      !confirmPassword ||
-      !gender
-    ) {
-      return res.status(400).json({ message: "All fields are required" });
-    }
+    const { fullName, userName, email, password, gender } = req.body;
 
-    if (password !== confirmPassword) {
-      return res.status(400).json({ message: "Passwords do not match" });
-    }
-
+    // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(409).json({ message: "User already exists" });
     }
-    // HASH PASSWORD
+
+    // Hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    //https://avatar.iran.liara.run/public/boy
+    // Set profile picture URL based on gender
+    const profilePicture =
+      gender === "male"
+        ? `https://avatar.iran.liara.run/public/boy?username=${userName}`
+        : `https://avatar.iran.liara.run/public/girl?username=${userName}`;
 
-    const boyProfilePic = `https://avatar.iran.liara.run/public/boy?username=${userName}`;
-    const girlProfilePic = `https://avatar.iran.liara.run/public/girl?username=${userName}`;
-
+    // Create new user
     const newUser = new User({
-      fullName: "fullName",
-      userName: "userName",
-      email: "email",
+      fullName,
+      userName,
+      email,
       password: hashedPassword,
       gender,
-      profilePicture: gender == "male" ? boyProfilePic : girlProfilePic,
+      profilePicture,
     });
 
+    // Save new user to the database
     await newUser.save();
 
-    console.log(newUser.profilePicture);
+    // Send success response
     res.status(201).json({
       message: "User registered successfully",
-      _id: newUser._id,
-      fullName: newUser.fullName,
-      userName: newUser.userName,
-      email: newUser.email,
-      profilePic: newUser.profilePic,
+      user: {
+        _id: newUser._id,
+        fullName: newUser.fullName,
+        userName: newUser.userName,
+        email: newUser.email,
+        profilePicture: newUser.profilePicture,
+      },
     });
   } catch (error) {
-    console.error("The error occured while signing up is: ", error.message);
-    res.status(500).json({ error: "Internal Server Error" });
+    if (error.isJoi) {
+      // Handle Joi validation errors
+      return res.status(400).json({ message: error.details[0].message });
+    }
+    console.error("The error occurred while signing up:", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
   }
-  console.log("Signup user");
 };
 
 export const LoginUser = (req, res) => {
