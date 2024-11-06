@@ -1,11 +1,12 @@
 import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
+import generateAuthTokenAndSetCookie from "../utils/generateToken.js";
+import { loginSchema } from "../middlewares/validation_schema.js";
 import authSchema from "../middlewares/validation_schema.js";
 
 export const SignupUser = async (req, res) => {
   try {
-    // Validate request body using Joi schema
+    // Validate input with Joi
     await authSchema.validateAsync(req.body);
 
     const { fullName, userName, email, password, gender } = req.body;
@@ -36,11 +37,12 @@ export const SignupUser = async (req, res) => {
       profilePicture,
     });
 
-    // Save new user to the database
+    // Save new user and set token cookie
     await newUser.save();
+    generateAuthTokenAndSetCookie(newUser._id, res);
 
     // Send success response
-    res.status(201).json({
+    return res.status(201).json({
       message: "User registered successfully",
       user: {
         _id: newUser._id,
@@ -56,12 +58,48 @@ export const SignupUser = async (req, res) => {
       return res.status(400).json({ message: error.details[0].message });
     }
     console.error("The error occurred while signing up:", error.message);
-    res.status(500).json({ message: "Internal Server Error" });
+    return res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
-export const LoginUser = (req, res) => {
-  console.log("Login user");
+// Login User
+export const LoginUser = async (req, res) => {
+  try {
+    // Validate login input using loginSchema
+    await loginSchema.validateAsync(req.body);
+
+    const { email, password } = req.body;
+
+    // Check if user exists
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Compare the provided password with the stored hashed password
+    const isPasswordMatch = await bcrypt.compare(password, user?.password || "");
+    if (!isPasswordMatch) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    // Generate token and set it as an HTTP-only cookie
+    generateAuthTokenAndSetCookie(user._id, res);
+
+    // Send success response
+    return res.status(200).json({
+      _id: user._id,
+      fullName: user.fullName,
+      userName: user.userName,
+      email: user.email,
+      profilePicture: user.profilePicture,
+    });
+  } catch (error) {
+    if (error.isJoi) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+    console.error("Error while logging in:", error.message);
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
 };
 export const LogoutUser = (req, res) => {
   console.log("Logout user");
