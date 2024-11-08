@@ -1,14 +1,20 @@
 import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+
+import Login from './pages/Login/Login';
+import { Signup } from './pages/Signup/Signup';
 
 const App = () => {
   return (
-    <div>
-      <div className='p-2 h-screen flex items-center justify-center '>
-        <h1 className='text-white text-4xl font-bold'>
-          Welcome to the App!
-        </h1>
+    <BrowserRouter>
+      <div className='p-4 h-screen flex items-center justify-center'>
+        <Routes>
+          {/* Define your routes here */}
+          <Route path='/login' element={<Login />} />
+          <Route path='/signup' element={<Signup />} />
+        </Routes>
       </div>
-    </div>
+    </BrowserRouter>
   );
 };
 
