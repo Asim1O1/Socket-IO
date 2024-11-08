@@ -10,7 +10,7 @@ const protectRoute = async (req, res, next) => {
       return next(createError(401, "No token provided, unauthorized"));
     }
 
-    jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
+    jwt.verify(token, process.env.JWT_KEY, async (err, decoded) => {
       if (err) {
         return next(createError(401, "Invalid or expired token"));
       }
@@ -27,7 +27,7 @@ const protectRoute = async (req, res, next) => {
     });
   } catch (error) {
     console.error("Error occurred while protecting route:", error);
-    next(createError(500, "Internal Server Error")); // Handle unexpected errors
+    next(createError(500, "Internal Server Error"));
   }
 };
 
